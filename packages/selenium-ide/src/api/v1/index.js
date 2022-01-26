@@ -27,6 +27,7 @@ import popupRouter from './popup'
 import UiState from '../../neo/stores/view/UiState'
 import WindowSession from '../../neo/IO/window-session'
 import ModalState from '../../neo/stores/view/ModalState'
+import PlaybackState from '../../neo/stores/view/PlaybackState'
 import { loadJSProject } from '../../neo/IO/filesystem'
 import manager from '../../plugin/manager'
 
@@ -98,6 +99,8 @@ router.get('/health', (req, res) => {
 
 router.post('/register', (req, res) => {
   controlledOnly(req, res).then(() => {
+    console.log( "Received register request: " + JSON.stringify( req ) );
+
     const plugin = {
       id: req.sender,
       name: req.name,
@@ -145,16 +148,19 @@ router.post('/close', (req, res) => {
   controlledOnly(req, res).then(() => {
     // Not allow close if is not control mode.
     if (!UiState.isControlled) {
+      console.log("Not allow close if is not control mode. Closing anyway")
+
+      window.close()
+      res(true)
+
       return res(false)
     }
-    const plugin = Manager.getPlugin(req.sender)
-    if (!plugin) return res(errors.missingPlugin)
+    // const plugin = Manager.getPlugin(req.sender)
+    // if (!plugin) return res(errors.missingPlugin)
     if (!UiState.isSaved()) {
       ModalState.showAlert({
         title: 'Close project without saving',
-        description: `${
-          plugin.name
-        } is trying to close a project, are you sure you want to load this project and lose all unsaved changes?`,
+        description: `External plugin is trying to close a project, are you sure you want to load this project and lose all unsaved changes?`,
         confirmLabel: 'proceed',
         cancelLabel: 'cancel',
       }).then(result => {
@@ -163,6 +169,9 @@ router.post('/close', (req, res) => {
           res(true)
         }
       })
+
+      console.log("Trying to close window")
+      window.close()
       res(false)
     } else {
       window.close()
@@ -190,23 +199,29 @@ router.post('/private/connect', (req, res) => {
 
 router.post('/project', (req, res) => {
   controlledOnly(req, res).then(() => {
+    console.log("/project post - Received project post " + JSON.stringify( req ));
+
     const plugin = Manager.getPlugin(req.sender)
-    if (!plugin) return res(errors.missingPlugin)
+    // if (!plugin) return res(errors.missingPlugin)
     if (!req.project) return res(errors.missingProject)
+
+    console.log("/project post - dealing with window");
 
     if (!UiState.isSaved()) {
       WindowSession.focusIDEWindow()
       ModalState.showAlert({
         title: 'Open project without saving',
-        description: `${
-          plugin.name
-        } is trying to load a project, are you sure you want to load this project and lose all unsaved changes?`,
+        description: `external plugin is trying to load a project, are you sure you want to load this project and lose all unsaved changes?`,
         confirmLabel: 'proceed',
         cancelLabel: 'cancel',
       }).then(result => {
         if (result) {
           loadJSProject(UiState.project, req.project)
           ModalState.completeWelcome()
+
+          console.log("/project post - loaded project: " + JSON.stringify(req.project));
+          // PlaybackState.playAll();
+
           res(true)
         }
       })
@@ -214,12 +229,35 @@ router.post('/project', (req, res) => {
       WindowSession.focusIDEWindow()
       loadJSProject(UiState.project, req.project)
       ModalState.completeWelcome()
+
+      console.log("/project post - loaded project: " + JSON.stringify(req.project));
+      playAll();
+
       res(true)
     }
     res(false)
   })
 })
 
+function playAll() {
+  const isInSuiteView = UiState.selectedView === 'Test suites'
+  // console.log("playAll: stopping");
+  // PlaybackState.stopPlaying();
+
+  if (PlaybackState.canPlaySuite) {
+    console.log("playAll: canPlaySuite");
+    PlaybackState.playSuiteOrResume()
+  } else if (isInSuiteView) {
+    ModalState.showAlert({
+      title: 'Select a test case',
+      description:
+        'To play a suite you must select a test case from within that suite.',
+    })
+  } else {
+    console.log("playAll: playFilteredTestsOrResume");
+    PlaybackState.playFilteredTestsOrResume()
+  }
+}
 router.use('/playback', playbackRouter)
 router.use('/record', recordRouter)
 router.use('/export', exportRouter)
