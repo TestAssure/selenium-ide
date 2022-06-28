@@ -1,10 +1,10 @@
 {
   "description": "Selenium Record and Playback tool for ease of getting acquainted with Selenium WebDriver.",
   "manifest_version": 2,
-  "name": "Selenium IDE",
-  "version": "3.17.2",
-  "version_name": "3.17.2",
-  "homepage_url": "https://github.com/SeleniumHQ/selenium-ide",
+  "name": "TestAssure Web Navigator",
+  "version": "1.0",
+  "version_name": "1.0",
+  "homepage_url": "https://www.testassure.com",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -17,7 +17,7 @@
       "32": "icons/icon_menu32.png",
       "64": "icons/icon_menu64.png"
     },
-    "default_title": "Selenium IDE"
+    "default_title": "TestAssure Web Navigator"
   },
   "permissions": [
     "tabs",
